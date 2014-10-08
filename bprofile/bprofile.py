@@ -27,6 +27,7 @@ except ImportError:
 this_folder = os.path.dirname(os.path.realpath(__file__))
 gprof2dot = os.path.join(this_folder, 'gprof2dot.py')
 
+
 def find_dot():
     devnull = open(os.devnull)
     if os.name == 'nt':
@@ -50,6 +51,7 @@ DOT_PATH = find_dot()
 
 
 class BProfile(object):
+
     """A profiling context manager. Outputs a .png graph made via profile/cProfile, gprof2dot
         and graphviz. graphviz is the only external dependency.
 
@@ -116,12 +118,12 @@ class BProfile(object):
         pieces of code waiting on each other in any way will deadlock, regardless of
         whether they share an underlying profile/cProfile profiler or not.
     """
-    
+
     class_lock = threading.Lock()
     report_required = threading.Event()
     report_thread = None
     instances_requiring_reports = set()
-    
+
     def __init__(self, output_path, threshold_percent=2.5, report_interval=5):
         if not output_path.lower().endswith('.png'):
             output_path += '.png'
@@ -137,36 +139,36 @@ class BProfile(object):
                 report_thread.daemon = True
                 report_thread.start()
                 self.__class__.report_thread = report_thread
-        
+
     def __enter__(self):
         self.class_lock.acquire()
         self.profiler.enable()
-        
+
     def __exit__(self, type, value, traceback):
         self.profiler.disable()
         self.instances_requiring_reports.add(self)
         self.report_required.set()
         self.class_lock.release()
-    
+
     def do_report(self):
-        pstats_file = '%s.pstats'%self.output_path
-        dot_file = '%s.dot'%self.output_path
+        pstats_file = '%s.pstats' % self.output_path
+        dot_file = '%s.dot' % self.output_path
         pstats.Stats(self.profiler).dump_stats(pstats_file)
         threshhold_percent = str(self.threshhold_percent)
-        subprocess.check_call([sys.executable, gprof2dot, '-n', threshhold_percent, '-f', 'pstats', 
+        subprocess.check_call([sys.executable, gprof2dot, '-n', threshhold_percent, '-f', 'pstats',
                                '-o', dot_file, pstats_file])
         subprocess.check_call([DOT_PATH, '-o', self.output_path, '-Tpng', dot_file])
         os.unlink(dot_file)
         os.unlink(pstats_file)
         self.time_of_last_report = time.time()
-    
+
     @classmethod
     def _atexit(cls):
         # Finish pending reports:
         with cls.class_lock:
             for instance in cls.instances_requiring_reports:
                 instance.do_report()
-        
+
     @classmethod
     def _report_loop(cls):
         atexit.register(cls._atexit)
@@ -180,7 +182,7 @@ class BProfile(object):
                     continue
                 for instance in cls.instances_requiring_reports.copy():
                     next_report_time = instance.time_of_last_report + instance.report_interval
-                    time_until_report =  next_report_time - time.time()
+                    time_until_report = next_report_time - time.time()
                     if time_until_report < 0:
                         instance.do_report()
                         cls.instances_requiring_reports.remove(instance)
@@ -189,17 +191,19 @@ class BProfile(object):
                             timeout = time_until_report
                         else:
                             timeout = min(timeout, time_until_report)
-                
-                
+
+
 if __name__ == '__main__':
     # Test:
     profiler = BProfile('test.png')
+
     def foo():
         time.sleep(0.05)
+
     def bar():
         time.sleep(0.1)
-        
-    start_time = time.time()    
+
+    start_time = time.time()
     for i in range(100):
         print(i)
         with profiler:

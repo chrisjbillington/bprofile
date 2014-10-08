@@ -14,13 +14,13 @@ from bprofile.bprofile import DOT_PATH
 VERSION = '1.0.0'
 
 DESCRIPTION = \
-"""A wrapper around profile/cProfile, gprof2dot and dot,
+    """A wrapper around profile/cProfile, gprof2dot and dot,
 providing a simple context manager for profiling sections
 of Python code and producing visual graphs of profiling results."""
 
 # Auto generate a __version__ package for the package to import
 with open(os.path.join('bprofile', '__version__.py'), 'w') as f:
-    f.write("__version__ = '%s'\n"%VERSION)
+    f.write("__version__ = '%s'\n" % VERSION)
 
 setup(name='bprofile',
       version=VERSION,
@@ -30,4 +30,4 @@ setup(name='bprofile',
       url='https://bitbucket.org/cbillington/bprofile',
       license="simplified BSD",
       packages=['bprofile'],
-     )
+      )

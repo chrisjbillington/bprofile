@@ -22,6 +22,6 @@ __doc__ = """
     of profiling results. See the documentation of
     bprofile.BProfile for more information and usage
     examples.
-    """ %__version__
+    """ % __version__
 
 __all__ = ['BProfile']
