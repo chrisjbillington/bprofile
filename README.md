@@ -63,6 +63,9 @@ rather than slowing your program down with generating output all the time. This 
 that if your profile block is running repeatedly, a new output file will be produced
 every `report_delay` seconds.
 
+Pending reports will be generated at interpreter shutdown if delay_time has not yet
+elapsed.
+
 Note that even if `report_delay` is short, it will not interfere with the profiling
 results themselves, as a lock is acquired that will prevent profiled code from running
 at the same time as the output generation code. So the overhead produced by output

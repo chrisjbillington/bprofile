@@ -14,10 +14,10 @@
 import sys
 import os
 import subprocess
-    
 import pstats
 import threading
 import time
+import atexit
 
 try:
     import cProfile as profile
@@ -86,6 +86,9 @@ class BProfile(object):
         that if your profile block is running repeatedly, a new output file will be produced
         every <report_delay> seconds.
         
+        Pending reports will be generated at interpreter shutdown if delay_time has not yet
+        elapsed.
+        
         Note that even if report_delay is short, it will not interfere with the profiling
         results themselves, as a lock is acquired that will prevent profiled code from running
         at the same time as the output generation code. So the overhead produced by output
@@ -144,27 +147,41 @@ class BProfile(object):
         os.unlink(dot_file)
         os.unlink(pstats_file)
         self.time_of_last_report = time.time()
+    
+    @classmethod
+    def _atexit(cls):
+        # Finish pending reports:
+        with cls.class_lock:
+            for instance in cls.instances_requiring_reports:
+                instance.do_report()
         
-    def _report_loop(self):
+    @classmethod
+    def _report_loop(cls):
+        atexit.register(cls._atexit)
         timeout = None
         while True:
-            self.report_required.wait(timeout)
-            with self.class_lock:
-                self.report_required.clear()
-                for instance in self.instances_requiring_reports.copy():
+            cls.report_required.wait(timeout)
+            with cls.class_lock:
+                cls.report_required.clear()
+                if not cls.instances_requiring_reports:
+                    timeout = None
+                    continue
+                for instance in cls.instances_requiring_reports.copy():
                     next_report_time = instance.time_of_last_report + instance.report_delay
                     time_until_report =  next_report_time - time.time()
                     if time_until_report < 0:
                         instance.do_report()
-                        self.instances_requiring_reports.remove(instance)
+                        cls.instances_requiring_reports.remove(instance)
                     else:
-                        timeout = min(timeout, time_until_report)
+                        if timeout is None:
+                            timeout = time_until_report
+                        else:
+                            timeout = min(timeout, time_until_report)
                 
-
+                
 if __name__ == '__main__':
     # Test:
     profile = BProfile('test.png')
-    
     def foo():
         time.sleep(0.05)
     def bar():
