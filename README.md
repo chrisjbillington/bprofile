@@ -16,7 +16,7 @@ of Python code and producing visual graphs of profiling results.
    
 This package provides a single class:
 
-    Profile(output_path, threshold_percent=2.5, report_delay=5)
+    BProfile(output_path, threshold_percent=2.5, report_delay=5)
     
 A profiling context manager. Outputs a .png graph made via profile/cProfile, gprof2dot
 and graphviz. graphviz is the only external dependency.
@@ -26,7 +26,7 @@ and graphviz. graphviz is the only external dependency.
 
 ```
 #!python
-profile = Profile('output.png')
+profile = BProfile('output.png')
 
 with profile:
     do_some_stuff()
