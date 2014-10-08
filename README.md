@@ -1,4 +1,4 @@
-## bprofile
+# bprofile
 
 A wrapper around profile/cProfile, gprof2dot and dot,
 providing a simple context manager for profiling sections
@@ -21,7 +21,8 @@ This package provides a single class:
 A profiling context manager. Outputs a .png graph made via profile/cProfile, gprof2dot
 and graphviz. graphviz is the only external dependency.
 
-# example usage:
+
+### Example usage:
 
 ```
 #!python
@@ -36,7 +37,8 @@ with profile:
     do_some_more_stuff()
 ```
 
-# arguments:
+
+### Arguments:
 
     - output_path:       the name of the .png file you would like to output. '.png'
                          will be appended if not present
@@ -51,14 +53,17 @@ with profile:
                          allowing you to have somewhat immedaite results of the profiling
                          while your code is still running. Defaults to 5 (seconds).
 
+
+### Output generation
+
 The profiler will return immediately after the context manager, and will generate
-its .png output after a delay (report_delay, default is 5 seconds) in a separate thread.
+its `.png` output after a delay (`report_delay`, default is 5 seconds) in a separate thread.
 The delay is to allow the block to execute many times before report generation,
 rather than slowing your program down with generating output all the time. This means
 that if your profile block is running repeatedly, a new output file will be produced
-every <report_delay> seconds.
+every `report_delay` seconds.
 
-Note that even if report_delay is short, it will not interfere with the profiling
+Note that even if `report_delay` is short, it will not interfere with the profiling
 results themselves, as a lock is acquired that will prevent profiled code from running
 at the same time as the output generation code. So the overhead produced by output
 generation does not affect the results of profiling - this overhead will only affect
@@ -67,8 +72,8 @@ portions of your code that are not being profiled.
 The lock is shared between instances, and so you can freely instantiate many
 Profile objects to profile different parts of your code (but give them different output
 filenames!).
-Profile objects are threadsafe, so you can also pass the same Profile object to different
+Profile objects are thread safe, so you can also pass the same Profile object to different
 parts of your code to profile them on the same graph.
 
 Note that since only one profiler can be running at a time, two profiled pieces of code
-waiting on each other in any way will cause a deadlock.
+waiting on each other in any way will deadlock.
