@@ -8,7 +8,10 @@
 from distutils.core import setup
 import os
 
-VERSION = '0.1.0'
+# Ensure graphviz is installed:
+from bprofile.bprofile import DOT_PATH
+
+VERSION = '0.1.1'
 
 DESCRIPTION = \
 """A wrapper around profile/cProfile, gprof2dot and dot,
