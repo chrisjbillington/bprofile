@@ -11,7 +11,7 @@ import os
 # Ensure graphviz is installed:
 from bprofile.bprofile import DOT_PATH
 
-VERSION = '0.1.1'
+VERSION = '1.0.0'
 
 DESCRIPTION = \
 """A wrapper around profile/cProfile, gprof2dot and dot,
