@@ -1,0 +1,3 @@
+syntax: glob
+*.pyc
+bprofile/__version__.py

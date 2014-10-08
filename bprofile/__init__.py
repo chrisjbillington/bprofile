@@ -24,4 +24,4 @@ __doc__ = """
     examples.
     """ %__version__
 
-__all__ == ['BProfile']
+__all__ = ['BProfile']
