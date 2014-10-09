@@ -8,9 +8,6 @@
 from distutils.core import setup
 import os
 
-# Ensure graphviz is installed:
-from bprofile.bprofile import DOT_PATH
-
 VERSION = '1.0.0'
 
 DESCRIPTION = \
@@ -21,6 +18,9 @@ of Python code and producing visual graphs of profiling results."""
 # Auto generate a __version__ package for the package to import
 with open(os.path.join('bprofile', '__version__.py'), 'w') as f:
     f.write("__version__ = '%s'\n" % VERSION)
+
+# Ensure graphviz is installed:
+from bprofile.bprofile import DOT_PATH
 
 setup(name='bprofile',
       version=VERSION,
