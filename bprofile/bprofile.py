@@ -106,16 +106,16 @@ class BProfile(object):
     portions of your code that are not being profiled.
 
     The lock is shared between instances, and so you can freely instantiate
-    many Profile objects to profile different parts of your code. Instances
-    with the same output file name will share an underlying profile/cProfile
-    profiler, and so their reports will be combined. Profile objects are
-    thread safe, however, so a single instance can be shared as well anywhere
-    in your program.
+    many ``BProfile`` instances to profile different parts of your code.
+    Instances with the same output file name will share an underlying
+    profile/cProfile profiler, and so their reports will be combined. Profile
+    objects are thread safe, so a single instance can be shared as well
+    anywhere in your program.
 
     .. warning::
 
         Since only one profiler can be running at a time, two profiled pieces
-        of code waiting on each other in any way will deadlock.
+        of code in different threads waiting on each other in any way will deadlock.
     """
 
     _lock = threading.RLock()
