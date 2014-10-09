@@ -17,7 +17,7 @@ from __version__ import __version__
 __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
     dot, providing a simple context manager for profiling sections of Python
     code and producing visual graphs of profiling results. It works on Windows
-    and unix.
+    and Unix.
 
     **View on PyPI**: http://pypi.python.org/pypi/bprofile
 
