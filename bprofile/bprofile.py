@@ -164,9 +164,9 @@ class BProfile(object):
 
         This occurs automatically at a rate of ``report_interval``, but one
         can call this method to report results sooner. The report will include
-        results from all BProfile instances that have the same output
-        filepath, and no more automatic reports (if further profiling is done)
-        will be produced until after the minimum delay_interval of those
+        results from all :class:`BProfile` instances that have the same ``output_path``
+        and no more automatic reports (if further profiling is done)
+        will be produced until after the minimum ``delay_interval`` of those
         instances.
 
         This method can be called at any time and is threadsafe, but it will

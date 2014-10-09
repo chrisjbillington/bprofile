@@ -17,16 +17,16 @@ try:
 except ImportError:
     __version__ = None
 
-__doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
-    dot, providing a simple context manager for profiling sections of Python
+__doc__ = r""" `bprofile` is a wrapper around `profile`/`cProfile`, `gprof2dot` and
+    `graphviz`, providing a simple context manager for profiling sections of Python
     code and producing visual graphs of profiling results. It works on Windows
     and Unix.
 
-    **View on PyPI**: http://pypi.python.org/pypi/bprofile
+    `View on PyPI <http://pypi.python.org/pypi/bprofile>`_
 
-    **Get the source from BitBucket**: http://bitbucket.org/cbillington/bprofile
+    `Get the source from BitBucket http://bitbucket.org/cbillington/bprofile>`_
 
-    **Read the docs at readthedocs**: http://bprofile.readthedocs.org
+    `Read the docs at readthedocs http://bprofile.readthedocs.org>`_
 
     *************
     Installation
@@ -47,8 +47,9 @@ __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
     .. note::
 
         `bprofile` requires `graphviz <http://www.graphviz.org/Download.php>`_
-        to be installed. `bprofile` looks for it in  ``C:\Program Files`` and
-        ``C:\Program Files (x86)`` on Windows, and in the PATH on unix.
+        to be installed. `bprofile` looks for a `graphviz` installation folder in
+        ``C:\Program Files`` or ``C:\Program Files (x86)`` on Windows, and for 
+        `graphviz` executables in the ``PATH`` on Unix.
 
     *************
     Introduction
