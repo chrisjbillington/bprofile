@@ -24,9 +24,9 @@ __doc__ = r""" `bprofile` is a wrapper around `profile`/`cProfile`, `gprof2dot` 
 
     `View on PyPI <http://pypi.python.org/pypi/bprofile>`_
 
-    `Get the source from BitBucket http://bitbucket.org/cbillington/bprofile>`_
+    `Get the source from BitBucket <http://bitbucket.org/cbillington/bprofile>`_
 
-    `Read the docs at readthedocs http://bprofile.readthedocs.org>`_
+    `Read the docs at readthedocs <http://bprofile.readthedocs.org>`_
 
     *************
     Installation
