@@ -12,7 +12,10 @@
 #####################################################################
 
 from .bprofile import BProfile
-from __version__ import __version__
+try:
+    from __version__ import __version__
+except ImportError:
+    __version__ = None
 
 __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
     dot, providing a simple context manager for profiling sections of Python
