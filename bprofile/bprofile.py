@@ -18,6 +18,7 @@ import pstats
 import threading
 import time
 import atexit
+import weakref
 
 try:
     import cProfile as profile
@@ -119,54 +120,87 @@ class BProfile(object):
         whether they share an underlying profile/cProfile profiler or not.
     """
 
-    class_lock = threading.Lock()
-    report_required = threading.Event()
-    report_thread = None
-    instances_requiring_reports = set()
+    _lock = threading.RLock()
+    _report_required = threading.Event()
+    _report_thread = None
+    _instances_requiring_reports = set()
+    _profilers = weakref.WeakValueDictionary()
 
     def __init__(self, output_path, threshold_percent=2.5, report_interval=5):
         if not output_path.lower().endswith('.png'):
             output_path += '.png'
-        self.output_path = output_path
-        self.threshhold_percent = threshold_percent
-        self.profiler = profile.Profile()
-        self.report_interval = report_interval
-        self.time_of_last_report = time.time() - report_interval
-        with self.class_lock:
+        output_path = os.path.abspath(os.path.realpath(output_path))
+        with self._lock:
+            self.output_path = output_path
+            self.threshold_percent = threshold_percent
+            self.report_interval = report_interval
+            self.time_of_last_report = time.time() - report_interval
+            # Only one profiler per output file:
+            try:
+                self.profiler = self._profilers[self.output_path]
+            except KeyError:
+                self.profiler = profile.Profile()
+                self._profilers[self.output_path] = self.profiler
             # only one reporting thread to be shared between instances:
-            if self.report_thread is None:
+            if self._report_thread is None:
                 report_thread = threading.Thread(target=self._report_loop)
                 report_thread.daemon = True
                 report_thread.start()
-                self.__class__.report_thread = report_thread
+                self.__class__._report_thread = report_thread
 
     def __enter__(self):
-        self.class_lock.acquire()
+        self._lock.acquire()
         self.profiler.enable()
 
     def __exit__(self, type, value, traceback):
         self.profiler.disable()
-        self.instances_requiring_reports.add(self)
-        self.report_required.set()
-        self.class_lock.release()
+        self._instances_requiring_reports.add(self)
+        self._report_required.set()
+        self._lock.release()
 
     def do_report(self):
-        pstats_file = '%s.pstats' % self.output_path
-        dot_file = '%s.dot' % self.output_path
-        pstats.Stats(self.profiler).dump_stats(pstats_file)
-        threshhold_percent = str(self.threshhold_percent)
-        subprocess.check_call([sys.executable, gprof2dot, '-n', threshhold_percent, '-f', 'pstats',
-                               '-o', dot_file, pstats_file])
-        subprocess.check_call([DOT_PATH, '-o', self.output_path, '-Tpng', dot_file])
-        os.unlink(dot_file)
-        os.unlink(pstats_file)
-        self.time_of_last_report = time.time()
+        """Collect statistics and output a .png file of the profiling report.
+
+        This occurs automatically at a rate of report_interval, but one can
+        call this method to report results sooner. The report will include
+        results from all BProfile instances that have the same output
+        filepath, and no more automatic reports (if further profiling is done)
+        will be produced until after the minimum delay_interval of those
+        instances.
+
+        This method can be called at any time and is threadsafe, but it will
+        acquire the class lock and so will block until any profiling in other
+        threads is complete. The lock is re-entrant, so this method can be
+        called during profiling in the current thread. This is not advisable
+        however, as the overhead incorred will skew profiling results."""
+        with self._lock:
+            output_path = self.output_path
+            profiler = self.profiler
+
+            pstats_file = '%s.pstats' % output_path
+            dot_file = '%s.dot' % output_path
+            pstats.Stats(profiler).dump_stats(pstats_file)
+
+            # All instances with this output file that have a pending report:
+            instances = [o for o in self._instances_requiring_reports if o.output_path == self.output_path]
+            threshold_percent = str(min(o.threshold_percent for o in instances))
+            subprocess.check_call([sys.executable, gprof2dot, '-n', threshold_percent, '-f', 'pstats',
+                                   '-o', dot_file, pstats_file])
+            subprocess.check_call([DOT_PATH, '-o', output_path, '-Tpng', dot_file])
+            os.unlink(dot_file)
+            os.unlink(pstats_file)
+
+            for o in self._instances_requiring_reports.copy():
+                if o.output_path == output_path:
+                    o.time_of_last_report = time.time()
+                    self._instances_requiring_reports.remove(o)
 
     @classmethod
     def _atexit(cls):
         # Finish pending reports:
-        with cls.class_lock:
-            for instance in cls.instances_requiring_reports:
+        with cls._lock:
+            while cls._instances_requiring_reports:
+                instance = cls._instances_requiring_reports.pop()
                 instance.do_report()
 
     @classmethod
@@ -174,23 +208,21 @@ class BProfile(object):
         atexit.register(cls._atexit)
         timeout = None
         while True:
-            cls.report_required.wait(timeout)
-            with cls.class_lock:
-                cls.report_required.clear()
-                if not cls.instances_requiring_reports:
+            cls._report_required.wait(timeout)
+            with cls._lock:
+                cls._report_required.clear()
+                if not cls._instances_requiring_reports:
                     timeout = None
                     continue
-                for instance in cls.instances_requiring_reports.copy():
+                for instance in cls._instances_requiring_reports.copy():
                     next_report_time = instance.time_of_last_report + instance.report_interval
                     time_until_report = next_report_time - time.time()
                     if time_until_report < 0:
                         instance.do_report()
-                        cls.instances_requiring_reports.remove(instance)
+                    elif timeout is None:
+                        timeout = time_until_report
                     else:
-                        if timeout is None:
-                            timeout = time_until_report
-                        else:
-                            timeout = min(timeout, time_until_report)
+                        timeout = min(timeout, time_until_report)
 
 
 if __name__ == '__main__':

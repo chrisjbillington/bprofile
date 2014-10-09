@@ -16,7 +16,7 @@ of Python code and producing visual graphs of profiling results.
    
 This package provides a single class:
 
-    BProfile(output_path, threshold_percent=2.5, report_interval=5)
+##`BProfile(output_path, threshold_percent=2.5, report_interval=5)`
     
 A profiling context manager. Outputs a .png graph made via profile/cProfile, gprof2dot
 and graphviz. graphviz is the only external dependency.
@@ -83,3 +83,22 @@ can be shared as well anywhere in your program.
 Note that since only one profiler can be running at a time, two profiled
 pieces of code waiting on each other in any way will deadlock, regardless of
 whether they share an underlying profile/cProfile profiler or not.
+
+### Public methods
+
+##`do_report()`
+
+Collect statistics and output a .png file of the profiling report.
+
+This occurs automatically at a rate of report_interval, but one can
+call this method to report results sooner. The report will include
+results from all BProfile instances that have the same output
+filepath, and no more automatic reports (if further profiling is done)
+will be produced until after the minimum delay_interval of those
+instances.
+
+This method can be called at any time and is threadsafe, but it will
+acquire the class lock and so will block until any profiling in other
+threads is complete. The lock is re-entrant, so this method can be
+called during profiling in the current thread. This is not advisable
+however, as the overhead incorred will skew profiling results.
