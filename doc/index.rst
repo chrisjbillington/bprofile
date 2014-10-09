@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 ##########################
-``bprofile`` Documentation
+bprofile Documentation
 ##########################
 
 .. toctree::
@@ -19,11 +19,3 @@ Class reference
 
 .. autoclass:: BProfile
     :members:
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-

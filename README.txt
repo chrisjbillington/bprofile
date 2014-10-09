@@ -1,5 +1,5 @@
 
-"bprofile" Documentation
+bprofile Documentation
 ************************
 
 *bprofile* is a wrapper around profile/cProfile, gprof2dot and dot,
@@ -157,12 +157,3 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
       thread. This is not advisable however, as the overhead incorred
       will skew profiling results.
 
-
-Indices and tables
-------------------
-
-* *Index*
-
-* *Module Index*
-
-* *Search Page*
