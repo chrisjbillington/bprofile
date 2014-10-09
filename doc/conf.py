@@ -16,7 +16,6 @@ copyright = u'2014, Chris Billington'
 version = '1.1'
 release = '1.1'
 exclude_patterns = ['_build']
-show_authors = True
 pygments_style = 'sphinx'
 
 # html

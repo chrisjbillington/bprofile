@@ -1,11 +1,9 @@
 
-################################
-bprofile |release| documentation
-################################
+##################
+bprofile |release|
+##################
 
-|today| 
-
-.. sectionauthor:: Chris Billington <chrisjbillington@gmail.com>
+`Chris Billington <mailto:chrisjbillington@gmail.com>`_, |today| 
 
 .. toctree::
    :maxdepth: 2
