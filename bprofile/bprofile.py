@@ -107,7 +107,7 @@ class BProfile(object):
 
     The lock is shared between instances, and so you can freely instantiate
     many ``BProfile`` instances to profile different parts of your code.
-    Instances with the same output file name will share an underlying
+    Instances with the same ``output_path`` will share an underlying
     profile/cProfile profiler, and so their reports will be combined. Profile
     objects are thread safe, so a single instance can be shared as well
     anywhere in your program.
@@ -162,8 +162,8 @@ class BProfile(object):
         Notes
         -----
 
-        This occurs automatically at a rate of report_interval, but one can
-        call this method to report results sooner. The report will include
+        This occurs automatically at a rate of ``report_interval``, but one
+        can call this method to report results sooner. The report will include
         results from all BProfile instances that have the same output
         filepath, and no more automatic reports (if further profiling is done)
         will be produced until after the minimum delay_interval of those
@@ -173,7 +173,7 @@ class BProfile(object):
         acquire the class lock and so will block until any profiling in other
         threads is complete. The lock is re-entrant, so this method can be
         called during profiling in the current thread. This is not advisable
-        however, as the overhead incorred will skew profiling results."""
+        however, as the overhead incurred will skew profiling results."""
         with self._lock:
             output_path = self.output_path
             profiler = self.profiler
