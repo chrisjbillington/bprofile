@@ -116,7 +116,6 @@ __doc__ = r""" `bprofile` is a wrapper around `profile`/`cProfile`, `gprof2dot` 
 
     see  :class:`BProfile` for more information on usage.
 
-    .. moduleauthor:: Chris Billington <chrisjbillington@gmail.com>
     """
 
 __all__ = ['BProfile']
