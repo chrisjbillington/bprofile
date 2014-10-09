@@ -76,7 +76,28 @@ __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
 
     .. code-block:: python
 
-        profiler = BProfile('output.png')
+        # example.py
+
+        import os
+        import time
+        import pylab as pl
+        from bprofile import BProfile
+
+        def do_some_stuff():
+            for i in range(100):
+                time.sleep(.01)
+
+        def do_some_stuff_that_wont_be_profiled():
+            os.system('ping -c 5 google.com')
+
+        def do_some_more_stuff(n):
+            x = pl.rand(100000)
+            for i in range(100):
+                time.sleep(.01)
+                x = pl.fft(x)
+
+
+        profiler = BProfile('example.png')
 
         with profiler:
             do_some_stuff()
@@ -84,9 +105,15 @@ __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
         do_some_stuff_that_wont_be_profiled()
 
         with profiler:
-            do_some_more_stuff()
+            do_some_more_stuff(5)
 
-    see  :class:`BProfile` for more information.
+
+    The above outputs the following image ``example.png`` in the current
+    working directory:
+
+    .. image:: example.png
+
+    see  :class:`BProfile` for more information on usage.
 
     .. moduleauthor:: Chris Billington <chrisjbillington@gmail.com>
     """

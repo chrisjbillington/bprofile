@@ -1,17 +1,18 @@
 
 bprofile Documentation
-************************
+**********************
 
 *bprofile* is a wrapper around profile/cProfile, gprof2dot and dot,
 providing a simple context manager for profiling sections of Python
 code and producing visual graphs of profiling results. It works on
 Windows and Unix.
 
-View on PyPI: http://pypi.python.org/pypi/bprofile
+**View on PyPI**: http://pypi.python.org/pypi/bprofile
 
-Get the source from BitBucket: http://bitbucket.org/cbillington/bprofile
+**Get the source from BitBucket**:
+http://bitbucket.org/cbillington/bprofile
 
-Read the docs at readthedocs: http://bprofile.readthedocs.org
+**Read the docs at readthedocs**: http://bprofile.readthedocs.org
 
 
 Installation
@@ -52,7 +53,28 @@ the ASCII beep characters.*
 Example usage
 =============
 
-   profiler = BProfile('output.png')
+   # example.py
+
+   import os
+   import time
+   import pylab as pl
+   from bprofile import BProfile
+
+   def do_some_stuff():
+       for i in range(100):
+           time.sleep(.01)
+
+   def do_some_stuff_that_wont_be_profiled():
+       os.system('ping -c 5 google.com')
+
+   def do_some_more_stuff(n):
+       x = pl.rand(100000)
+       for i in range(100):
+           time.sleep(.01)
+           x = pl.fft(x)
+
+
+   profiler = BProfile('example.png')
 
    with profiler:
        do_some_stuff()
@@ -60,9 +82,14 @@ Example usage
    do_some_stuff_that_wont_be_profiled()
 
    with profiler:
-       do_some_more_stuff()
+       do_some_more_stuff(5)
 
-see  "BProfile" for more information.
+The above outputs the following image "example.png" in the current
+working directory:
+
+[image]
+
+see  "BProfile" for more information on usage.
 
 
 Class reference
@@ -78,31 +105,26 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
    regularly updates its output to include cumulative results.
 
    Parameters:
-      **output_path: str**
+      * **output_path** (*str*) -- The name of the .png report file
+        you would like to output. '.png' will be appended if not
+        present.
 
-         The name of the .png report file you would like to output.
-         '.png' will be appended if not present.
+      * **threshold_percent** (*int or float*) -- Nodes in which
+        execution spends less than this percentage of the total
+        profiled execution time will not be included in the output.
 
-      **threshold_percent: int or float**
-
-         Nodes in which execution spends less than this percentage of
-         the total profiled execution time will not be included in the
-         output.
-
-      **report_interval: int or float**
-
-         The minimum time, in seconds, in between output file
-         generation. If the context manager exits and it has not been
-         at least this long since the last output was generated,
-         output generation will be delayed until it has been. More
-         profiling can run in the meantime. This is to decrease
-         overhead on your program, (even though this overhead will
-         only be incurred when no code is being profiled), while
-         allowing you to have ongoing results of the profiling while
-         your code is still running. If you only use the context
-         manager once, then this argument has no effect. If you set it
-         to zero, output will be produced after every exit of the
-         context.
+      * **report_interval** (*int or float*) -- The minimum time, in
+        seconds, in between output file generation. If the context
+        manager exits and it has not been at least this long since the
+        last output was generated, output generation will be delayed
+        until it has been. More profiling can run in the meantime.
+        This is to decrease overhead on your program, (even though
+        this overhead will only be incurred when no code is being
+        profiled), while allowing you to have ongoing results of the
+        profiling while your code is still running. If you only use
+        the context manager once, then this argument has no effect. If
+        you set it to zero, output will be produced after every exit
+        of the context.
 
    -[ Notes ]-
 
@@ -156,4 +178,3 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
       so this method can be called during profiling in the current
       thread. This is not advisable however, as the overhead incorred
       will skew profiling results.
-

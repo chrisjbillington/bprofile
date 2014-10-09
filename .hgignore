@@ -3,3 +3,4 @@ syntax: glob
 bprofile/__version__.py
 MANIFEST
 dist/*
+doc/_build/*
