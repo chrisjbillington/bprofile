@@ -29,6 +29,20 @@ this_folder = os.path.dirname(os.path.realpath(__file__))
 gprof2dot = os.path.join(this_folder, 'gprof2dot.py')
 
 
+# Startupinfo, for ensuring subprocesses don't launch with a visible cmd.exe
+# window on Windows:
+if os.name == 'nt':
+    startupinfo = subprocess.STARTUPINFO()
+    try:
+        STARTF_USESHOWWINDOW = subprocess.STARTF_USESHOWWINDOW
+    except AttributeError:
+        # Above is absent in some versions of Python, but for them it is here:
+        STARTF_USESHOWWINDOW = subprocess._subprocess.STARTF_USESHOWWINDOW
+    startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+else:
+    startupinfo = None
+
+
 def find_dot():
     devnull = open(os.devnull)
     if os.name == 'nt':
@@ -49,7 +63,6 @@ def find_dot():
 
 
 DOT_PATH = find_dot()
-
 
 class BProfile(object):
 
@@ -186,8 +199,8 @@ class BProfile(object):
             instances = [o for o in self._instances_requiring_reports if o.output_path == self.output_path]
             threshold_percent = str(min(o.threshold_percent for o in instances))
             subprocess.check_call([sys.executable, gprof2dot, '-n', threshold_percent, '-f', 'pstats',
-                                   '-o', dot_file, pstats_file])
-            subprocess.check_call([DOT_PATH, '-o', output_path, '-Tpng', dot_file])
+                                   '-o', dot_file, pstats_file], startupinfo=startupinfo)
+            subprocess.check_call([DOT_PATH, '-o', output_path, '-Tpng', dot_file], startupinfo=startupinfo)
             os.unlink(dot_file)
             os.unlink(pstats_file)
 
