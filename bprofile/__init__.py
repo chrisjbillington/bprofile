@@ -19,9 +19,11 @@ __doc__ = r""" `bprofile` is a wrapper around profile/cProfile, gprof2dot and
     code and producing visual graphs of profiling results. It works on Windows
     and unix.
 
-    `View on PyPI <https://pypi.python.org/pypi/bprofile>`_
-    `Get the source from BitBucket <https://bitbucket.org/cbillington/bprofile>`_
-    `Read the docs at readthedocs <http://bprofile.readthedocs.org>`_
+    **View on PyPI**: http://pypi.python.org/pypi/bprofile
+
+    **Get the source from BitBucket**: http://bitbucket.org/cbillington/bprofile
+
+    **Read the docs at readthedocs**: http://bprofile.readthedocs.org
 
     *************
     Installation
