@@ -7,8 +7,11 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinxcontrib.napoleon',
-    'sphinxcontrib.restbuilder'
 ]
+
+if os.environ.get('READTHEDOCS', None) is None:
+    # For making the README.rst file with 'make readme':
+    extensions.append('sphinxcontrib.restbuilder')
 
 source_suffix = '.rst'
 master_doc = 'index'

@@ -182,13 +182,14 @@ class BProfile(object):
         can call this method to report results sooner. The report will include
         results from all :class:`BProfile` instances that have the same
         ``output_path`` and no more automatic reports (if further profiling is
-        done) will be produced until after the minimum ``delay_interval`` of
+        done) will be produced until after the minimum ``report_interval`` of
         those instances.
 
         This method can be called at any time and is threadsafe. It is not
         advisable to call it during profiling however as this will incur
-        overhead that will affect the profiling results. Automatic reports are
-        guaranteed to be generated only when no profiling is taking place."""
+        overhead that will affect the profiling results. Only automatic
+        reports are guaranteed to be generated only when no profiling is
+        taking place."""
         output_path = self.output_path
         profiler = self.profiler
 

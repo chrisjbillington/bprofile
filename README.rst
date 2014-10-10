@@ -43,7 +43,7 @@ gprof2dot and graphviz. And then it turns out the code I want to
 profile is a GUI callback or something, and I don't want to profile
 the whole program because it spends most of its time doing nothing.
 
-profile/cProfile certainly has this functionality, which I took one
+profile/cProfile certainly have this functionality, which I took one
 look at, and thought: *This should be a context manager, and when it
 exits, it should call gprof2dot and graphviz automatically so I don't
 have to remember their command line arguments, and so I don't
@@ -92,7 +92,7 @@ Example usage
 The above outputs the following image ``example.png`` in the current
 working directory:
 
-[image]
+.. image:: doc/example.png
 
 see  ``BProfile`` for more information on usage.
 
@@ -177,10 +177,10 @@ report_interval=5)**
       will include results from all ``BProfile`` instances that have
       the same ``output_path`` and no more automatic reports (if
       further profiling is done) will be produced until after the
-      minimum ``delay_interval`` of those instances.
+      minimum ``report_interval`` of those instances.
 
       This method can be called at any time and is threadsafe. It is
       not advisable to call it during profiling however as this will
-      incur overhead that will affect the profiling results. Automatic
-      reports are guaranteed to be generated only when no profiling is
-      taking place.
+      incur overhead that will affect the profiling results. Only
+      automatic reports are guaranteed to be generated only when no
+      profiling is taking place.
