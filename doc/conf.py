@@ -3,9 +3,15 @@ import os
 
 sys.path.insert(0, os.path.abspath('..'))
 
+# Pull the version string out of setup.py without importing it
+with open('../setup.py') as f:
+    for line in f:
+        if '__version__' in line:
+            __version__ = eval(line.split('=')[1])
+            break
+
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
     'sphinxcontrib.napoleon',
 ]
 
@@ -13,19 +19,8 @@ if os.environ.get('READTHEDOCS', None) is None:
     # For making the README.rst file with 'make readme':
     extensions.append('sphinxcontrib.restbuilder')
 
-source_suffix = '.rst'
 master_doc = 'index'
 project = u'bprofile'
 copyright = u'2014, Chris Billington'
-version = '1.1'
-release = '1.1'
-exclude_patterns = ['_build']
-pygments_style = 'sphinx'
-
-# html
-html_theme = 'default'
-htmlhelp_basename = 'bprofiledoc'
-
-# latex
-latex_documents = [('index', 'bprofile.tex', u'bprofile Documentation', u'Chris Billington', 'manual')]
-
+version = __version__
+release = '.'.join(__version__.split('.')[:-1])

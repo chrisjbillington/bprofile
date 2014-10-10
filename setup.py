@@ -8,7 +8,7 @@
 from distutils.core import setup
 import os
 
-VERSION = '1.1.1'
+__version__ = '1.1.2'
 
 DESCRIPTION = \
     """A wrapper around profile/cProfile, gprof2dot and dot,
@@ -17,13 +17,13 @@ of Python code and producing visual graphs of profiling results."""
 
 # Auto generate a __version__ package for the package to import
 with open(os.path.join('bprofile', '__version__.py'), 'w') as f:
-    f.write("__version__ = '%s'\n" % VERSION)
+    f.write("__version__ = '%s'\n" % __version__)
 
 # Ensure graphviz is installed:
 from bprofile.bprofile import DOT_PATH
 
 setup(name='bprofile',
-      version=VERSION,
+      version=__version__,
       description=DESCRIPTION,
       author='Chris Billington',
       author_email='chrisjbillington@gmail.com',

@@ -182,5 +182,5 @@ report_interval=5)**
       This method can be called at any time and is threadsafe. It is
       not advisable to call it during profiling however as this will
       incur overhead that will affect the profiling results. Only
-      automatic reports are guaranteed to be generated only when no
+      automatic reports are guaranteed to be generated when no
       profiling is taking place.
