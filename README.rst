@@ -28,7 +28,8 @@ or to install from source:
 
    $ python setup.py install
 
-Note: *bprofile* requires graphviz to be installed. *bprofile* looks for a
+Note:
+   *bprofile* requires graphviz to be installed. *bprofile* looks for a
   *graphviz* installation folder in ``C:\Program Files`` or
   ``C:\Program Files (x86)`` on Windows, and for *graphviz*
   executables in the ``PATH`` on Unix.
@@ -161,7 +162,8 @@ report_interval=5)**
    combined. Profile objects are thread safe, so a single instance can
    be shared as well anywhere in your program.
 
-   Warning: Since only one profiler can be running at a time, two profiled
+   Warning:
+   Since only one profiler can be running at a time, two profiled
      pieces of code in different threads waiting on each other in any
      way will deadlock.
 
