@@ -188,8 +188,8 @@ class BProfile(object):
         This method can be called at any time and is threadsafe. It is not
         advisable to call it during profiling however as this will incur
         overhead that will affect the profiling results. Only automatic
-        reports are guaranteed to be generated only when no profiling is
-        taking place."""
+        reports are guaranteed to be generated when no profiling is taking
+        place."""
         output_path = self.output_path
         profiler = self.profiler
 

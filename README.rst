@@ -92,7 +92,7 @@ Example usage
 The above outputs the following image ``example.png`` in the current
 working directory:
 
-.. image:: doc/example.png
+.. image:: https://bitbucket.org/cbillington/bprofile/raw/default/doc/example.png
 
 see  ``BProfile`` for more information on usage.
 
