@@ -2,7 +2,7 @@
 bprofile 1.1
 ************
 
-Chris Billington, October 09, 2014
+`Chris Billington <mailto:chrisjbillington@gmail.com>`_, October 09, 2014
 
 *bprofile* is a wrapper around *profile*/*cProfile*, *gprof2dot* and
 *graphviz*, providing a simple context manager for profiling sections
