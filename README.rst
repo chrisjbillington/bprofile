@@ -9,8 +9,9 @@ Chris Billington, October 09, 2014
 of Python code and producing visual graphs of profiling results. It
 works on Windows and Unix.
 
-View on PyPI | Get the source from BitBucket | Read the docs at
-readthedocs
+`View on PyPI <http://pypi.python.org/pypi/bprofile>`_
+| `Get the source from BitBucket <http://bitbucket.org/cbillington/bprofile>`_
+| `Read the docs at readthedocs <http://bprofile.readthedocs.org>`_
 
 
 Installation
