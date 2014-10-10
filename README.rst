@@ -1,18 +1,16 @@
 
-bprofile Documentation
-**********************
+bprofile 1.1
+************
 
-*bprofile* is a wrapper around profile/cProfile, gprof2dot and dot,
-providing a simple context manager for profiling sections of Python
-code and producing visual graphs of profiling results. It works on
-Windows and Unix.
+Chris Billington, October 09, 2014
 
-**View on PyPI**: http://pypi.python.org/pypi/bprofile
+*bprofile* is a wrapper around *profile*/*cProfile*, *gprof2dot* and
+*graphviz*, providing a simple context manager for profiling sections
+of Python code and producing visual graphs of profiling results. It
+works on Windows and Unix.
 
-**Get the source from BitBucket**:
-http://bitbucket.org/cbillington/bprofile
-
-**Read the docs at readthedocs**: http://bprofile.readthedocs.org
+View on PyPI | Get the source from BitBucket | Read the docs at
+readthedocs
 
 
 Installation
@@ -20,15 +18,20 @@ Installation
 
 to install *bprofile*, run:
 
+::
+
    $ pip install bprofile
 
 or to install from source:
 
+::
+
    $ python setup.py install
 
-Note: *bprofile* requires graphviz to be installed. *bprofile* looks
-  for it in  "C:\Program Files" and "C:\Program Files (x86)" on
-  Windows, and in the PATH on unix.
+Note: *bprofile* requires graphviz to be installed. *bprofile* looks for a
+  *graphviz* installation folder in ``C:\Program Files`` or
+  ``C:\Program Files (x86)`` on Windows, and for *graphviz*
+  executables in the ``PATH`` on Unix.
 
 
 Introduction
@@ -47,11 +50,13 @@ have to remember their command line arguments, and so I don't
 accidentally print a .png to standard output and have to listen to all
 the ASCII beep characters.*
 
-"BProfile" provides this functionality.
+``BProfile`` provides this functionality.
 
 
 Example usage
 =============
+
+::
 
    # example.py
 
@@ -84,18 +89,19 @@ Example usage
    with profiler:
        do_some_more_stuff(5)
 
-The above outputs the following image "example.png" in the current
+The above outputs the following image ``example.png`` in the current
 working directory:
 
 [image]
 
-see  "BProfile" for more information on usage.
+see  ``BProfile`` for more information on usage.
 
 
 Class reference
 ===============
 
-class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interval=5)
+**class bprofile.BProfile(output_path, threshold_percent=2.5,
+report_interval=5)**
 
    A profiling context manager.
 
@@ -104,7 +110,7 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
    context manager can be used multiple times, and if used repeatedly,
    regularly updates its output to include cumulative results.
 
-   Parameters:
+   :Parameters:
       * **output_path** (*str*) -- The name of the .png report file
         you would like to output. '.png' will be appended if not
         present.
@@ -131,15 +137,16 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
    The profiler will return immediately after the context manager, and
    will generate its .png report in a separate thread. If the same
    context manager is used multiple times output will be generated at
-   most every "report_interval" seconds (default: 5). The delay is to
-   allow blocks to execute many times in between reports, rather than
-   slowing your program down with generating graphs all the time. This
-   means that if your profile block is running rapidly and repeatedly,
-   a new report will be produced every "report_interval" seconds.
+   most every ``report_interval`` seconds (default: 5). The delay is
+   to allow blocks to execute many times in between reports, rather
+   than slowing your program down with generating graphs all the time.
+   This means that if your profile block is running rapidly and
+   repeatedly, a new report will be produced every ``report_interval``
+   seconds.
 
    Pending reports will be generated at interpreter shutdown.
 
-   Note that even if "report_interval" is short, reporting will not
+   Note that even if ``report_interval`` is short, reporting will not
    interfere with the profiling results themselves, as a lock is
    acquired that will prevent profiled code from running at the same
    time as the report generation code. So the overhead produced by
@@ -148,33 +155,32 @@ class class bprofile.BProfile(output_path, threshold_percent=2.5, report_interva
    profiled.
 
    The lock is shared between instances, and so you can freely
-   instantiate many Profile objects to profile different parts of your
-   code. Instances with the same output file name will share an
+   instantiate many ``BProfile`` instances to profile different parts
+   of your code. Instances with the same ``output_path`` will share an
    underlying profile/cProfile profiler, and so their reports will be
-   combined. Profile objects are thread safe, however, so a single
-   instance can be shared as well anywhere in your program.
+   combined. Profile objects are thread safe, so a single instance can
+   be shared as well anywhere in your program.
 
-   Warning: Since only one profiler can be running at a time, two
-     profiled pieces of code waiting on each other in any way will
-     deadlock.
+   Warning: Since only one profiler can be running at a time, two profiled
+     pieces of code in different threads waiting on each other in any
+     way will deadlock.
 
-   do_report()
+   **do_report()**
 
       Collect statistics and output a .png file of the profiling
       report.
 
       -[ Notes ]-
 
-      This occurs automatically at a rate of report_interval, but one
-      can call this method to report results sooner. The report will
-      include results from all BProfile instances that have the same
-      output filepath, and no more automatic reports (if further
-      profiling is done) will be produced until after the minimum
-      delay_interval of those instances.
+      This occurs automatically at a rate of ``report_interval``, but
+      one can call this method to report results sooner. The report
+      will include results from all ``BProfile`` instances that have
+      the same ``output_path`` and no more automatic reports (if
+      further profiling is done) will be produced until after the
+      minimum ``delay_interval`` of those instances.
 
-      This method can be called at any time and is threadsafe, but it
-      will acquire the class lock and so will block until any
-      profiling in other threads is complete. The lock is re-entrant,
-      so this method can be called during profiling in the current
-      thread. This is not advisable however, as the overhead incorred
-      will skew profiling results.
+      This method can be called at any time and is threadsafe. It is
+      not advisable to call it during profiling however as this will
+      incur overhead that will affect the profiling results. Automatic
+      reports are guaranteed to be generated only when no profiling is
+      taking place.
