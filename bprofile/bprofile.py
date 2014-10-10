@@ -128,7 +128,8 @@ class BProfile(object):
     .. warning::
 
         Since only one profiler can be running at a time, two profiled pieces
-        of code in different threads waiting on each other in any way will deadlock.
+        of code in different threads waiting on each other in any way will
+        deadlock.
     """
 
     _lock = threading.RLock()
@@ -163,11 +164,13 @@ class BProfile(object):
         self._lock.acquire()
         self.profiler.enable()
 
-    def __exit__(self, type, value, traceback):
-        self.profiler.disable()
-        self._instances_requiring_reports.add(self)
-        self._report_required.set()
-        self._lock.release()
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        try:
+            self.profiler.disable()
+            self._instances_requiring_reports.add(self)
+            self._report_required.set()
+        finally:
+            self._lock.release()
 
     def do_report(self):
         """Collect statistics and output a .png file of the profiling report.
@@ -177,44 +180,52 @@ class BProfile(object):
 
         This occurs automatically at a rate of ``report_interval``, but one
         can call this method to report results sooner. The report will include
-        results from all :class:`BProfile` instances that have the same ``output_path``
-        and no more automatic reports (if further profiling is done)
-        will be produced until after the minimum ``delay_interval`` of those
-        instances.
+        results from all :class:`BProfile` instances that have the same
+        ``output_path`` and no more automatic reports (if further profiling is
+        done) will be produced until after the minimum ``delay_interval`` of
+        those instances.
 
-        This method can be called at any time and is threadsafe, but it will
-        acquire the class lock and so will block until any profiling in other
-        threads is complete. The lock is re-entrant, so this method can be
-        called during profiling in the current thread. This is not advisable
-        however, as the overhead incurred will skew profiling results."""
-        with self._lock:
-            output_path = self.output_path
-            profiler = self.profiler
+        This method can be called at any time and is threadsafe. It is not
+        advisable to call it during profiling however as this will incur
+        overhead that will affect the profiling results. Automatic reports are
+        guaranteed to be generated only when no profiling is taking place."""
+        output_path = self.output_path
+        profiler = self.profiler
 
-            pstats_file = '%s.pstats' % output_path
-            dot_file = '%s.dot' % output_path
-            pstats.Stats(profiler).dump_stats(pstats_file)
+        pstats_file = '%s.pstats' % output_path
+        dot_file = '%s.dot' % output_path
+        pstats.Stats(profiler).dump_stats(pstats_file)
 
-            # All instances with this output file that have a pending report:
-            instances = [o for o in self._instances_requiring_reports if o.output_path == self.output_path]
-            threshold_percent = str(min(o.threshold_percent for o in instances))
+        # All instances with this output file that have a pending report:
+        instances = set(o for o in self._instances_requiring_reports.copy() if o.output_path == self.output_path)
+        instances.add(self)
+        threshold_percent = str(min(o.threshold_percent for o in instances))
+        try:
             subprocess.check_call([sys.executable, gprof2dot, '-n', threshold_percent, '-f', 'pstats',
                                    '-o', dot_file, pstats_file], startupinfo=startupinfo)
             subprocess.check_call([DOT_PATH, '-o', output_path, '-Tpng', dot_file], startupinfo=startupinfo)
             os.unlink(dot_file)
             os.unlink(pstats_file)
+        except subprocess.CalledProcessError:
+            sys.stderr.write('gprof2dot or dot returned nonzero exit code\n')
 
-            for o in self._instances_requiring_reports.copy():
-                if o.output_path == output_path:
-                    o.time_of_last_report = time.time()
-                    self._instances_requiring_reports.remove(o)
+        for instance in instances:
+            instance.time_of_last_report = time.time()
+            try:
+                self._instances_requiring_reports.remove(instance)
+            except KeyError:
+                # Another thread already removed it:
+                pass
 
     @classmethod
     def _atexit(cls):
         # Finish pending reports:
-        with cls._lock:
-            while cls._instances_requiring_reports:
-                instance = cls._instances_requiring_reports.pop()
+        while True:
+            try:
+                instance = next(iter(cls._instances_requiring_reports.copy()))
+            except StopIteration:
+                break
+            else:
                 instance.do_report()
 
     @classmethod
@@ -254,6 +265,7 @@ if __name__ == '__main__':
         print(i)
         with profiler:
             time.sleep(0.1)
+            profiler.do_report()
             foo()
             bar()
     print(time.time() - start_time)
