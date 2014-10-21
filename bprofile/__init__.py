@@ -17,10 +17,10 @@ try:
 except ImportError:
     __version__ = None
 
-__doc__ = r""" `bprofile` is a wrapper around `profile`/`cProfile`, `gprof2dot` and
-    `graphviz`, providing a simple context manager for profiling sections of Python
-    code and producing visual graphs of profiling results. It works on Windows
-    and Unix.
+__doc__ = r""" `bprofile` is a wrapper around `cProfile`, `gprof2dot` and
+    `graphviz`, providing a simple context manager for profiling sections of
+    Python code and producing visual graphs of profiling results. It works on
+    Windows and Unix.
 
     `View on PyPI <http://pypi.python.org/pypi/bprofile>`_
     | `Get the source from BitBucket <http://bitbucket.org/cbillington/bprofile>`_
@@ -54,12 +54,12 @@ __doc__ = r""" `bprofile` is a wrapper around `profile`/`cProfile`, `gprof2dot` 
     *************
 
     Every time I need to profile some Python code I go through the same steps:
-    looking up profile/cProfile's docs, and then reading about gprof2dot and
-    graphviz. And then it turns out the code I want to profile is a GUI
-    callback or something, and I don't want to profile the whole program
-    because it spends most of its time doing nothing.
+    looking up `cProfile`'s docs, and then reading about `gprof2dot` and `graphviz`.
+    And then it turns out the code I want to profile is a GUI callback or
+    something, and I don't want to profile the whole program because it spends
+    most of its time doing nothing.
 
-    profile/cProfile certainly have this functionality, which I took one look
+    `cProfile` certainly has this functionality, which I took one look
     at, and thought: *This should be a context manager, and when it exits, it
     should call gprof2dot and graphviz automatically so I don't have to
     remember their command line arguments, and so I don't accidentally print a

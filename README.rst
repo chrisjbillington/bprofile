@@ -2,12 +2,12 @@
 bprofile 1.1
 ************
 
-`Chris Billington <mailto:chrisjbillington@gmail.com>`_, October 09, 2014
+`Chris Billington <mailto:chrisjbillington@gmail.com>`_, October 20, 2014
 
-*bprofile* is a wrapper around *profile*/*cProfile*, *gprof2dot* and
-*graphviz*, providing a simple context manager for profiling sections
-of Python code and producing visual graphs of profiling results. It
-works on Windows and Unix.
+*bprofile* is a wrapper around *cProfile*, *gprof2dot* and *graphviz*,
+providing a simple context manager for profiling sections of Python
+code and producing visual graphs of profiling results. It works on
+Windows and Unix.
 
 `View on PyPI <http://pypi.python.org/pypi/bprofile>`_
 | `Get the source from BitBucket <http://bitbucket.org/cbillington/bprofile>`_
@@ -40,17 +40,17 @@ Introduction
 ============
 
 Every time I need to profile some Python code I go through the same
-steps: looking up profile/cProfile's docs, and then reading about
-gprof2dot and graphviz. And then it turns out the code I want to
+steps: looking up *cProfile*'s docs, and then reading about
+*gprof2dot* and *graphviz*. And then it turns out the code I want to
 profile is a GUI callback or something, and I don't want to profile
 the whole program because it spends most of its time doing nothing.
 
-profile/cProfile certainly have this functionality, which I took one
-look at, and thought: *This should be a context manager, and when it
-exits, it should call gprof2dot and graphviz automatically so I don't
-have to remember their command line arguments, and so I don't
-accidentally print a .png to standard output and have to listen to all
-the ASCII beep characters.*
+*cProfile* certainly has this functionality, which I took one look at,
+and thought: *This should be a context manager, and when it exits, it
+should call gprof2dot and graphviz automatically so I don't have to
+remember their command line arguments, and so I don't accidentally
+print a .png to standard output and have to listen to all the ASCII
+beep characters.*
 
 ``BProfile`` provides this functionality.
 
@@ -108,8 +108,8 @@ report_interval=5)**
    A profiling context manager.
 
    A context manager that after it exits, outputs a .png file of a
-   graph made via profile/cProfile, gprof2dot and graphviz. The
-   context manager can be used multiple times, and if used repeatedly,
+   graph made via cProfile, gprof2dot and graphviz. The context
+   manager can be used multiple times, and if used repeatedly,
    regularly updates its output to include cumulative results.
 
    :Parameters:
@@ -159,7 +159,7 @@ report_interval=5)**
    The lock is shared between instances, and so you can freely
    instantiate many ``BProfile`` instances to profile different parts
    of your code. Instances with the same ``output_path`` will share an
-   underlying profile/cProfile profiler, and so their reports will be
+   underlying cProfile profiler, and so their reports will be
    combined. Profile objects are thread safe, so a single instance can
    be shared as well anywhere in your program.
 
@@ -187,3 +187,32 @@ report_interval=5)**
       incur overhead that will affect the profiling results. Only
       automatic reports are guaranteed to be generated when no
       profiling is taking place.
+
+   **set_enabled(enabled)**
+
+      Set whether profiling is enabled.
+
+      if enabled==True, all methods work as normal. Otherwise
+      ``start()``, ``stop()``, and ``do_report()`` become dummy
+      methods that do nothing. This is useful for having a global
+      variable to turn profiling on or off, based on whether one is
+      debugging or not, or to enable or disable profiling of different
+      parts of code selectively.
+
+      If profiling is running when this method is called to disable
+      it, the profiling will be stopped.
+
+   **start()**
+
+      Begin profiling.
+
+   **stop()**
+
+      Stop profiling.
+
+      Stop profiling and outptut a profiling report, if at least
+      ``report_interval`` has elapsed since the last report. Otherwise
+      output the report after a delay.
+
+      Does not preclude starting profiling again at a  later time.
+      Results are cumulative.

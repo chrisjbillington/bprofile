@@ -19,11 +19,10 @@ import threading
 import time
 import atexit
 import weakref
+import uuid
+import tempfile
 
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
+import cProfile
 
 this_folder = os.path.dirname(os.path.realpath(__file__))
 gprof2dot = os.path.join(this_folder, 'gprof2dot.py')
@@ -69,9 +68,9 @@ class BProfile(object):
     """A profiling context manager.
 
     A context manager that after it exits, outputs a .png file of a graph made
-    via profile/cProfile, gprof2dot and graphviz. The context manager can be
-    used multiple times, and if used repeatedly, regularly updates its output
-    to include cumulative results.
+    via cProfile, gprof2dot and graphviz. The context manager can be used
+    multiple times, and if used repeatedly, regularly updates its output to
+    include cumulative results.
 
     Parameters
     ----------
@@ -119,11 +118,11 @@ class BProfile(object):
     portions of your code that are not being profiled.
 
     The lock is shared between instances, and so you can freely instantiate
-    many ``BProfile`` instances to profile different parts of your code.
-    Instances with the same ``output_path`` will share an underlying
-    profile/cProfile profiler, and so their reports will be combined. Profile
-    objects are thread safe, so a single instance can be shared as well
-    anywhere in your program.
+    many :class:`BProfile` instances to profile different parts of your code.
+    Instances with the same ``output_path`` will share an underlying cProfile
+    profiler, and so their reports will be combined. Profile objects are
+    thread safe, so a single instance can be shared as well anywhere in your
+    program.
 
     .. warning::
 
@@ -132,7 +131,7 @@ class BProfile(object):
         deadlock.
     """
 
-    _lock = threading.RLock()
+    _class_lock = threading.Lock()
     _report_required = threading.Event()
     _report_thread = None
     _instances_requiring_reports = set()
@@ -142,16 +141,19 @@ class BProfile(object):
         if not output_path.lower().endswith('.png'):
             output_path += '.png'
         output_path = os.path.abspath(os.path.realpath(output_path))
-        with self._lock:
+        with self._class_lock:
             self.output_path = output_path
             self.threshold_percent = threshold_percent
             self.report_interval = report_interval
             self.time_of_last_report = time.time() - report_interval
+            self.enabled = True
+            self.running = False
+            self._instance_lock = threading.Lock()
             # Only one profiler per output file:
             try:
                 self.profiler = self._profilers[self.output_path]
             except KeyError:
-                self.profiler = profile.Profile()
+                self.profiler = cProfile.Profile()
                 self._profilers[self.output_path] = self.profiler
             # only one reporting thread to be shared between instances:
             if self._report_thread is None:
@@ -161,16 +163,55 @@ class BProfile(object):
                 self.__class__._report_thread = report_thread
 
     def __enter__(self):
-        self._lock.acquire()
-        self.profiler.enable()
+        self.start()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        try:
-            self.profiler.disable()
-            self._instances_requiring_reports.add(self)
-            self._report_required.set()
-        finally:
-            self._lock.release()
+        self.stop()
+
+    def set_enabled(self, enabled):
+        """Set whether profiling is enabled.
+
+        if enabled==True, all methods work as normal. Otherwise
+        :func:`~bprofile.BProfile.start`, :func:`~bprofile.BProfile.stop`, and
+        :func:`~bprofile.BProfile.do_report` become dummy methods that do
+        nothing. This is useful for having a global variable to turn
+        profiling on or off, based on whether one is debugging or not, or
+        to enable or disable profiling of different parts of code selectively.
+
+        If profiling is running when this method is called to disable it, the
+        profiling will be stopped."""
+        with self._instance_lock:
+            self.enabled = bool(enabled)
+            if not enabled and self.running:
+                self.profiler.disable()
+                self._class_lock.release()
+
+    def start(self):
+        """Begin profiling."""
+        with self._instance_lock:
+            if not self.enabled:
+                return
+            self._class_lock.acquire()
+            self.profiler.enable()
+
+    def stop(self):
+        """Stop profiling.
+
+        Stop profiling and outptut a profiling report, if at least
+        ``report_interval`` has elapsed since the last report. Otherwise
+        output the report after a delay.
+
+        Does not preclude starting profiling again at a  later time. Results
+        are cumulative."""
+        with self._instance_lock:
+            if not self.enabled:
+                return
+            try:
+                self.profiler.disable()
+                self._instances_requiring_reports.add(self)
+                self._report_required.set()
+            finally:
+                self._class_lock.release()
 
     def do_report(self):
         """Collect statistics and output a .png file of the profiling report.
@@ -190,11 +231,16 @@ class BProfile(object):
         overhead that will affect the profiling results. Only automatic
         reports are guaranteed to be generated when no profiling is taking
         place."""
+        if not self.enabled:
+            return
         output_path = self.output_path
         profiler = self.profiler
-
-        pstats_file = '%s.pstats' % output_path
-        dot_file = '%s.dot' % output_path
+        # Randomly named tempfiles, we don't use NamedTemporaryFile as we
+        # don't want to create the files - just pass the names as command line
+        # arguments to other programs:
+        tempfile_prefix = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+        pstats_file = tempfile_prefix + '.pstats'
+        dot_file = tempfile_prefix + '.dot'
         pstats.Stats(profiler).dump_stats(pstats_file)
 
         # All instances with this output file that have a pending report:
@@ -235,7 +281,7 @@ class BProfile(object):
         timeout = None
         while True:
             cls._report_required.wait(timeout)
-            with cls._lock:
+            with cls._class_lock:
                 cls._report_required.clear()
                 if not cls._instances_requiring_reports:
                     timeout = None
@@ -266,7 +312,7 @@ if __name__ == '__main__':
         print(i)
         with profiler:
             time.sleep(0.1)
-            profiler.do_report()
+            # profiler.do_report()
             foo()
             bar()
     print(time.time() - start_time)

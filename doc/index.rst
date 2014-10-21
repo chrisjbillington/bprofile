@@ -3,7 +3,7 @@
 bprofile |release|
 ##################
 
-`Chris Billington <mailto:chrisjbillington@gmail.com>`_, |today| 
+`Chris Billington <mailto:chrisjbillington@gmail.com>`_, |today|
 
 .. toctree::
    :maxdepth: 2
