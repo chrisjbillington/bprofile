@@ -12,7 +12,7 @@ with open('../setup.py') as f:
 
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
+    'sphinxcontrib.napoleon',
 ]
 
 if os.environ.get('READTHEDOCS', None) is None:
