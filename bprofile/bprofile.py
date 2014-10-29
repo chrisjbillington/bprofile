@@ -21,7 +21,7 @@ import atexit
 import weakref
 import uuid
 import tempfile
-
+import functools
 import cProfile
 
 this_folder = os.path.dirname(os.path.realpath(__file__))
@@ -71,6 +71,9 @@ class BProfile(object):
     via cProfile, gprof2dot and graphviz. The context manager can be used
     multiple times, and if used repeatedly, regularly updates its output to
     include cumulative results.
+    
+    An instance can also be used as a decorator, it will simply wrap calls to
+    the decorated method in profiling context.
 
     Parameters
     ----------
@@ -94,6 +97,13 @@ class BProfile(object):
         running. If you only use the context manager once, then this argument
         has no effect. If you set it to zero, output will be produced after
         every exit of the context.
+        
+    enabled: bool
+        Whether the profiler is enabled or not. Equivalent to calling
+        :func:`~bprofile.BProfile.set_enabled` with this argument after
+        instantiation. Useful for enabling and disabling profiling with
+        a global flag when you do not have easy access to the instance
+        - for example when using as a decorator.
 
 
     Notes
@@ -137,7 +147,7 @@ class BProfile(object):
     _instances_requiring_reports = set()
     _profilers = weakref.WeakValueDictionary()
 
-    def __init__(self, output_path, threshold_percent=2.5, report_interval=5):
+    def __init__(self, output_path, threshold_percent=2.5, report_interval=5, enabled=True):
         if not output_path.lower().endswith('.png'):
             output_path += '.png'
         output_path = os.path.abspath(os.path.realpath(output_path))
@@ -162,6 +172,15 @@ class BProfile(object):
                 report_thread.start()
                 self.__class__._report_thread = report_thread
 
+    def __call__(self, function):
+        """Returns a wrapped version of ``function`` with profiling.
+        Intended for use as a decorator"""
+        @functools.wraps(function)
+        def function_with_profiling(*args, **kwargs):
+            with self:
+                function(*args, **kwargs)
+        return function_with_profiling
+        
     def __enter__(self):
         self.start()
 
@@ -301,6 +320,12 @@ if __name__ == '__main__':
     # Test:
     profiler = BProfile('test.png')
 
+    @profiler
+    def decorator_test():
+        time.sleep(10)
+        
+    decorator_test()
+    
     def foo():
         time.sleep(0.05)
 
