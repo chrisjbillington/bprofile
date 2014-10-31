@@ -8,7 +8,7 @@
 from distutils.core import setup
 import os
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 DESCRIPTION = \
     """A wrapper around profile/cProfile, gprof2dot and dot,
