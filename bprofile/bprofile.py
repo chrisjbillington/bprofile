@@ -73,7 +73,7 @@ class BProfile(object):
     include cumulative results.
     
     An instance can also be used as a decorator, it will simply wrap calls to
-    the decorated method in profiling context.
+    the decorated method in the profiling context.
 
     Parameters
     ----------
@@ -146,7 +146,8 @@ class BProfile(object):
     _report_thread = None
     _instances_requiring_reports = set()
     _profilers = weakref.WeakValueDictionary()
-
+    _threadlocal = threading.local()
+    
     def __init__(self, output_path, threshold_percent=2.5, report_interval=5, enabled=True):
         if not output_path.lower().endswith('.png'):
             output_path += '.png'
@@ -174,11 +175,11 @@ class BProfile(object):
 
     def __call__(self, function):
         """Returns a wrapped version of ``function`` with profiling.
-        Intended for use as a decorator"""
+        Intended for use as a decorator."""
         @functools.wraps(function)
         def function_with_profiling(*args, **kwargs):
             with self:
-                function(*args, **kwargs)
+                return function(*args, **kwargs)
         return function_with_profiling
         
     def __enter__(self):
@@ -210,7 +211,15 @@ class BProfile(object):
         with self._instance_lock:
             if not self.enabled:
                 return
+            if getattr(self._threadlocal, 'is_profiling', False):
+                message = ('Profiling is already running in this thread. ' + 
+                           'Only one profiler can be running at a time, ' +
+                           'and since we are in the same thread we cannot simply ' +
+                           'wait until it finishes, as that would deadlock. ' +
+                           'I thought you would prefer an error message to a deadlock.')
+                raise RuntimeError(message)
             self._class_lock.acquire()
+            self._threadlocal.is_profiling = True
             self.profiler.enable()
 
     def stop(self):
@@ -231,6 +240,7 @@ class BProfile(object):
                 self._report_required.set()
             finally:
                 self._class_lock.release()
+                self._threadlocal.is_profiling = False
 
     def do_report(self):
         """Collect statistics and output a .png file of the profiling report.
@@ -322,7 +332,8 @@ if __name__ == '__main__':
 
     @profiler
     def decorator_test():
-        time.sleep(10)
+        with profiler:
+            time.sleep(10)
         
     decorator_test()
     
