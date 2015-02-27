@@ -144,6 +144,7 @@ class BProfile(object):
     _class_lock = threading.Lock()
     _report_required = threading.Event()
     _report_thread = None
+    _reporting_lock = threading.RLock()
     _instances_requiring_reports = set()
     _profilers = weakref.WeakValueDictionary()
     _threadlocal = threading.local()
@@ -168,7 +169,7 @@ class BProfile(object):
                 self._profilers[self.output_path] = self.profiler
             # only one reporting thread to be shared between instances:
             if self._report_thread is None:
-                report_thread = threading.Thread(target=self._report_loop)
+                report_thread = threading.Thread(target=self._report_loop, name='bprofile.Bprofile._report_loop')
                 report_thread.daemon = True
                 report_thread.start()
                 self.__class__._report_thread = report_thread
@@ -262,47 +263,47 @@ class BProfile(object):
         place."""
         if not self.enabled:
             return
-        output_path = self.output_path
-        profiler = self.profiler
         # Randomly named tempfiles, we don't use NamedTemporaryFile as we
         # don't want to create the files - just pass the names as command line
         # arguments to other programs:
         tempfile_prefix = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         pstats_file = tempfile_prefix + '.pstats'
         dot_file = tempfile_prefix + '.dot'
-        pstats.Stats(profiler).dump_stats(pstats_file)
+        with self._reporting_lock:
+            pstats.Stats(self.profiler).dump_stats(pstats_file)
 
-        # All instances with this output file that have a pending report:
-        instances = set(o for o in self._instances_requiring_reports.copy() if o.output_path == self.output_path)
-        instances.add(self)
-        threshold_percent = str(min(o.threshold_percent for o in instances))
-        try:
-            subprocess.check_call([sys.executable, gprof2dot, '-n', threshold_percent, '-f', 'pstats',
-                                   '-o', dot_file, pstats_file], startupinfo=startupinfo)
-            subprocess.check_call([DOT_PATH, '-o', output_path, '-Tpng', dot_file], startupinfo=startupinfo)
-            os.unlink(dot_file)
-            os.unlink(pstats_file)
-        except subprocess.CalledProcessError:
-            sys.stderr.write('gprof2dot or dot returned nonzero exit code\n')
-
-        for instance in instances:
-            instance.time_of_last_report = time.time()
+            # All instances with this output file that have a pending report:
+            instances = set(o for o in self._instances_requiring_reports.copy() if o.output_path == self.output_path)
+            instances.add(self)
+            threshold_percent = str(min(o.threshold_percent for o in instances))
             try:
-                self._instances_requiring_reports.remove(instance)
-            except KeyError:
-                # Another thread already removed it:
-                pass
+                subprocess.check_call([sys.executable, gprof2dot, '-n', threshold_percent, '-f', 'pstats',
+                                       '-o', dot_file, pstats_file], startupinfo=startupinfo)
+                subprocess.check_call([DOT_PATH, '-o', self.output_path, '-Tpng', dot_file], startupinfo=startupinfo)
+                os.unlink(dot_file)
+                os.unlink(pstats_file)
+            except subprocess.CalledProcessError:
+                sys.stderr.write('gprof2dot or dot returned nonzero exit code\n')
+
+            for instance in instances:
+                instance.time_of_last_report = time.time()
+                try:
+                    self._instances_requiring_reports.remove(instance)
+                except KeyError:
+                    # Another thread already removed it:
+                    pass
 
     @classmethod
     def _atexit(cls):
         # Finish pending reports:
-        while True:
-            try:
-                instance = next(iter(cls._instances_requiring_reports.copy()))
-            except StopIteration:
-                break
-            else:
-                instance.do_report()
+        with cls._reporting_lock:
+            while True:
+                try:
+                    instance = cls._instances_requiring_reports.pop()
+                except KeyError:
+                    break
+                else:
+                    instance.do_report()
 
     @classmethod
     def _report_loop(cls):
@@ -315,15 +316,24 @@ class BProfile(object):
                 if not cls._instances_requiring_reports:
                     timeout = None
                     continue
-                for instance in cls._instances_requiring_reports.copy():
-                    next_report_time = instance.time_of_last_report + instance.report_interval
-                    time_until_report = next_report_time - time.time()
-                    if time_until_report < 0:
-                        instance.do_report()
-                    elif timeout is None:
-                        timeout = time_until_report
-                    else:
-                        timeout = min(timeout, time_until_report)
+                with cls._reporting_lock:
+                    for instance in cls._instances_requiring_reports.copy():
+                        if instance not in cls._instances_requiring_reports:
+                            # Instance has already had a report run on it,
+                            # because it shares a profiler with another
+                            # instance we just reported on. So it has been
+                            # removed from the set. Do not run an extra report
+                            # on it.
+                            continue
+                        else:
+                            next_report_time = instance.time_of_last_report + instance.report_interval
+                            time_until_report = next_report_time - time.time()
+                            if time_until_report < 0:
+                                instance.do_report()
+                            elif timeout is None:
+                                timeout = time_until_report
+                            else:
+                                timeout = min(timeout, time_until_report)
 
 
 if __name__ == '__main__':
@@ -335,7 +345,7 @@ if __name__ == '__main__':
         with profiler:
             time.sleep(10)
         
-    decorator_test()
+    # decorator_test() # this should raise an exception saying it would deadlock
     
     def foo():
         time.sleep(0.05)
