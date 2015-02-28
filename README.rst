@@ -1,8 +1,8 @@
 
-bprofile 1.1
+bprofile 1.3
 ************
 
-`Chris Billington <mailto:chrisjbillington@gmail.com>`_, October 20, 2014
+`Chris Billington <mailto:chrisjbillington@gmail.com>`_, February 28, 2015
 
 *bprofile* is a wrapper around *cProfile*, *gprof2dot* and *graphviz*,
 providing a simple context manager for profiling sections of Python
@@ -103,7 +103,7 @@ Class reference
 ===============
 
 **class bprofile.BProfile(output_path, threshold_percent=2.5,
-report_interval=5)**
+report_interval=5, enabled=True)**
 
    A profiling context manager.
 
@@ -111,6 +111,9 @@ report_interval=5)**
    graph made via cProfile, gprof2dot and graphviz. The context
    manager can be used multiple times, and if used repeatedly,
    regularly updates its output to include cumulative results.
+
+   An instance can also be used as a decorator, it will simply wrap
+   calls to the decorated method in the profiling context.
 
    :Parameters:
       * **output_path** (*str*) -- The name of the .png report file
@@ -133,6 +136,13 @@ report_interval=5)**
         the context manager once, then this argument has no effect. If
         you set it to zero, output will be produced after every exit
         of the context.
+
+      * **enabled** (*bool*) -- Whether the profiler is enabled or
+        not. Equivalent to calling ``set_enabled()`` with this
+        argument after instantiation. Useful for enabling and
+        disabling profiling with a global flag when you do not have
+        easy access to the instance - for example when using as a
+        decorator.
 
    -[ Notes ]-
 
@@ -167,6 +177,11 @@ report_interval=5)**
      Since only one profiler can be running at a time, two profiled
      pieces of code in different threads waiting on each other in any
      way will deadlock.
+
+   **__call__(function)**
+
+      Returns a wrapped version of ``function`` with profiling.
+      Intended for use as a decorator.
 
    **do_report()**
 

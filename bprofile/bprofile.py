@@ -24,6 +24,7 @@ import tempfile
 import functools
 import cProfile
 
+
 this_folder = os.path.dirname(os.path.realpath(__file__))
 gprof2dot = os.path.join(this_folder, 'gprof2dot.py')
 
@@ -62,6 +63,7 @@ def find_dot():
 
 
 DOT_PATH = find_dot()
+
 
 class BProfile(object):
 
@@ -169,7 +171,7 @@ class BProfile(object):
                 self._profilers[self.output_path] = self.profiler
             # only one reporting thread to be shared between instances:
             if self._report_thread is None:
-                report_thread = threading.Thread(target=self._report_loop, name='bprofile.Bprofile._report_loop')
+                report_thread = threading.Thread(target=self._report_loop, name='bprofile.BProfile._report_loop')
                 report_thread.daemon = True
                 report_thread.start()
                 self.__class__._report_thread = report_thread
