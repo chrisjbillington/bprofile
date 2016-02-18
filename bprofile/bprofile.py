@@ -46,9 +46,18 @@ else:
 def find_dot():
     devnull = open(os.devnull)
     if os.name == 'nt':
-        program_files = os.environ["ProgramFiles"]
-        program_files_x86 = os.environ["ProgramFiles(x86)"]
-        for folder in [program_files, program_files_x86]:
+        folders = []
+        try:
+            program_files = os.environ["ProgramFiles"]
+            folders.append(program_files)
+        except KeyError:
+            pass
+        try:
+            program_files_x86 = os.environ["ProgramFiles(x86)"]
+            folders.append(program_files_x86)
+        except KeyError:
+            pass
+        for folder in folders:
             for subfolder in os.listdir(folder):
                 if 'graphviz' in subfolder.lower():
                     dot = os.path.join(folder, subfolder, 'bin', 'dot.exe')
