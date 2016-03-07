@@ -8,14 +8,14 @@
 from distutils.core import setup
 import os
 
-__version__ = '1.3.2'
+__version__ = '1.3.3'
 
 DESCRIPTION = \
     """A wrapper around profile/cProfile, gprof2dot and dot,
 providing a simple context manager for profiling sections
 of Python code and producing visual graphs of profiling results."""
 
-# Auto generate a __version__ package for the package to import
+# Auto generate a __version__ module for the package to import
 with open(os.path.join('bprofile', '__version__.py'), 'w') as f:
     f.write("__version__ = '%s'\n" % __version__)
 
