@@ -169,7 +169,7 @@ class BProfile(object):
             self.threshold_percent = threshold_percent
             self.report_interval = report_interval
             self.time_of_last_report = time.time() - report_interval
-            self.enabled = True
+            self.enabled = enabled
             self.running = False
             self._instance_lock = threading.Lock()
             # Only one profiler per output file:

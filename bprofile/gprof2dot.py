@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-# Copyright 2008-2014 Jose Fonseca
+# Copyright 2008-2017 Jose Fonseca
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published
@@ -47,13 +47,6 @@ else:
     def compat_iteritems(x): return x.iteritems()
     def compat_itervalues(x): return x.itervalues()
     def compat_keys(x): return x.keys()
-
-
-try:
-    # Debugging helper module
-    import debug
-except ImportError:
-    pass
 
 
 
@@ -174,6 +167,9 @@ class Object(object):
     def __eq__(self, other):
         return self is other
 
+    def __lt__(self, other):
+        return id(self) < id(other)
+
     def __contains__(self, event):
         return event in self.events
     
@@ -217,6 +213,7 @@ class Function(Object):
         self.called = None
         self.weight = None
         self.cycle = None
+        self.filename = None
     
     def add_call(self, call):
         if call.callee_id in self.calls:
@@ -311,10 +308,11 @@ class Profile(Object):
         """Find cycles using Tarjan's strongly connected components algorithm."""
 
         # Apply the Tarjan's algorithm successively until all functions are visited
-        visited = set()
+        stack = []
+        data = {}
+        order = 0
         for function in compat_itervalues(self.functions):
-            if function not in visited:
-                self._tarjan(function, 0, [], {}, {}, visited)
+            order = self._tarjan(function, order, stack, data)
         cycles = []
         for function in compat_itervalues(self.functions):
             if function.cycle is not None and function.cycle not in cycles:
@@ -372,29 +370,41 @@ class Profile(Object):
             if self.functions[f].name == funcName:
                 return f
         return False
-    
-    def _tarjan(self, function, order, stack, orders, lowlinks, visited):
+
+    class _TarjanData:
+        def __init__(self, order):
+            self.order = order
+            self.lowlink = order
+            self.onstack = False
+
+    def _tarjan(self, function, order, stack, data):
         """Tarjan's strongly connected components algorithm.
 
         See also:
         - http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
         """
 
-        visited.add(function)
-        orders[function] = order
-        lowlinks[function] = order
+        try:
+            func_data = data[function.id]
+            return order
+        except KeyError:
+            func_data = self._TarjanData(order)
+            data[function.id] = func_data
         order += 1
         pos = len(stack)
         stack.append(function)
+        func_data.onstack = True
         for call in compat_itervalues(function.calls):
-            callee = self.functions[call.callee_id]
-            # TODO: use a set to optimize lookup
-            if callee not in orders:
-                order = self._tarjan(callee, order, stack, orders, lowlinks, visited)
-                lowlinks[function] = min(lowlinks[function], lowlinks[callee])
-            elif callee in stack:
-                lowlinks[function] = min(lowlinks[function], orders[callee])
-        if lowlinks[function] == orders[function]:
+            try:
+                callee_data = data[call.callee_id]
+                if callee_data.onstack:
+                    func_data.lowlink = min(func_data.lowlink, callee_data.order)
+            except KeyError:
+                callee = self.functions[call.callee_id]
+                order = self._tarjan(callee, order, stack, data)
+                callee_data = data[call.callee_id]
+                func_data.lowlink = min(func_data.lowlink, callee_data.lowlink)
+        if func_data.lowlink == func_data.order:
             # Strongly connected component found
             members = stack[pos:]
             del stack[pos:]
@@ -402,6 +412,10 @@ class Profile(Object):
                 cycle = Cycle()
                 for member in members:
                     cycle.add_function(member)
+                    data[member.id].onstack = False
+            else:
+                for member in members:
+                    data[member.id].onstack = False
         return order
 
     def call_ratios(self, event):
@@ -531,22 +545,66 @@ class Profile(Object):
                 ranks = {}
                 call_ratios = {}
                 partials = {}
-                self._rank_cycle_function(cycle, callee, 0, ranks)
+                self._rank_cycle_function(cycle, callee, ranks)
                 self._call_ratios_cycle(cycle, callee, ranks, call_ratios, set())
                 partial = self._integrate_cycle_function(cycle, callee, call_ratio, partials, ranks, call_ratios, outevent, inevent)
-                assert partial == max(partials.values())
+
+                # Ensure `partial == max(partials.values())`, but with round-off tolerance
+                max_partial = max(partials.values())
+                assert abs(partial - max_partial) <= 1e-7*max_partial
+
                 assert abs(call_ratio*total - partial) <= 0.001*call_ratio*total
 
         return cycle[outevent]
 
-    def _rank_cycle_function(self, cycle, function, rank, ranks):
-        if function not in ranks or ranks[function] > rank:
-            ranks[function] = rank
-            for call in compat_itervalues(function.calls):
-                if call.callee_id != function.id:
-                    callee = self.functions[call.callee_id]
-                    if callee.cycle is cycle:
-                        self._rank_cycle_function(cycle, callee, rank + 1, ranks)
+    def _rank_cycle_function(self, cycle, function, ranks):
+        """Dijkstra's shortest paths algorithm.
+
+        See also:
+        - http://en.wikipedia.org/wiki/Dijkstra's_algorithm
+        """
+
+        import heapq
+        Q = []
+        Qd = {}
+        p = {}
+        visited = set([function])
+
+        ranks[function] = 0
+        for call in compat_itervalues(function.calls):
+            if call.callee_id != function.id:
+                callee = self.functions[call.callee_id]
+                if callee.cycle is cycle:
+                    ranks[callee] = 1
+                    item = [ranks[callee], function, callee]
+                    heapq.heappush(Q, item)
+                    Qd[callee] = item
+
+        while Q:
+            cost, parent, member = heapq.heappop(Q)
+            if member not in visited:
+                p[member]= parent
+                visited.add(member)
+                for call in compat_itervalues(member.calls):
+                    if call.callee_id != member.id:
+                        callee = self.functions[call.callee_id]
+                        if callee.cycle is cycle:
+                            member_rank = ranks[member]
+                            rank = ranks.get(callee)
+                            if rank is not None:
+                                if rank > 1 + member_rank:
+                                    rank = 1 + member_rank
+                                    ranks[callee] = rank
+                                    Qd_callee = Qd[callee]
+                                    Qd_callee[0] = rank
+                                    Qd_callee[1] = member
+                                    heapq._siftdown(Q, 0, Q.index(Qd_callee))
+                            else:
+                                rank = 1 + member_rank
+                                ranks[callee] = rank
+                                item = [rank, member, callee]
+                                heapq.heappush(Q, item)
+                                Qd[callee] = item
 
     def _call_ratios_cycle(self, cycle, function, ranks, call_ratios, visited):
         if function not in visited:
@@ -609,7 +667,7 @@ class Profile(Object):
                     call[outevent] = ratio(call[inevent], self[inevent])
         self[outevent] = 1.0
 
-    def prune(self, node_thres, edge_thres):
+    def prune(self, node_thres, edge_thres, colour_nodes_by_selftime):
         """Prune the profile"""
 
         # compute the prune ratios
@@ -645,6 +703,22 @@ class Profile(Object):
                 call = function.calls[callee_id]
                 if callee_id not in self.functions or call.weight is not None and call.weight < edge_thres:
                     del function.calls[callee_id]
+
+        if colour_nodes_by_selftime:
+            weights = []
+            for function in compat_itervalues(self.functions):
+                try:
+                    weights.append(function[TIME_RATIO])
+                except UndefinedEvent:
+                    pass
+            max_ratio = max(weights or [1])
+
+            # apply rescaled weights for coloriung
+            for function in compat_itervalues(self.functions):
+                try:
+                    function.weight = function[TIME_RATIO] / max_ratio
+                except (ZeroDivisionError, UndefinedEvent):
+                    pass
     
     def dump(self):
         for function in compat_itervalues(self.functions):
@@ -1308,7 +1382,8 @@ class AXEParser(Parser):
         r'\s+(?P<descendants>\d+\.\d+)' + 
         r'\s+(?P<name>\S.*?)' +
         r'(?:\s+<cycle\s(?P<cycle>\d+)>)?' +
-        r'\s+\[(\d+)\]$'
+        r'\s+\[(\d+)\]' +
+        r'\s*$'
     )
 
     _cg_parent_re = re.compile(
@@ -1316,7 +1391,8 @@ class AXEParser(Parser):
         r'\s+(?P<descendants>\d+\.\d+)?' + 
         r'\s+(?P<name>\S.*?)' +
         r'(?:\s+<cycle\s(?P<cycle>\d+)>)?' +
-        r'\s+\[(?P<index>\d+)\]$'
+        r'(?:\s+\[(?P<index>\d+)\]\s*)?' +
+        r'\s*$'
     )
 
     _cg_child_re = _cg_parent_re
@@ -1327,7 +1403,8 @@ class AXEParser(Parser):
         r'\s+(?P<self>\d+\.\d+)' + 
         r'\s+(?P<descendants>\d+\.\d+)' + 
         r'\s+<cycle\s(?P<cycle>\d+)\sas\sa\swhole>' +
-        r'\s+\[(\d+)\]$'
+        r'\s+\[(\d+)\]' +
+        r'\s*$'
     )
 
     _cg_cycle_member_re = re.compile(
@@ -1335,7 +1412,8 @@ class AXEParser(Parser):
         r'\s+(?P<descendants>\d+\.\d+)?' + 
         r'\s+(?P<name>\S.*?)' +
         r'(?:\s+<cycle\s(?P<cycle>\d+)>)?' +
-        r'\s+\[(?P<index>\d+)\]$'
+        r'\s+\[(?P<index>\d+)\]' +
+        r'\s*$'
     )
 
     def parse_function_entry(self, lines):
@@ -1450,7 +1528,7 @@ class AXEParser(Parser):
             line = self.readline()
 
     def parse(self):
-        sys.stderr.write('warning: for axe format, edge weights are unreliable estimates derived from\nfunction total times.\n')
+        sys.stderr.write('warning: for axe format, edge weights are unreliable estimates derived from function total times.\n')
         self.parse_cg()
         self.fp.close()
 
@@ -1923,7 +2001,8 @@ class PerfParser(LineParser):
             self.consume()
         return callchain
 
-    call_re = re.compile(r'^\s+(?P<address>[0-9a-fA-F]+)\s+(?P<symbol>.*)\s+\((?P<module>[^)]*)\)$')
+    call_re = re.compile(r'^\s+(?P<address>[0-9a-fA-F]+)\s+(?P<symbol>.*)\s+\((?P<module>.*)\)$')
+    addr2_re = re.compile(r'\+0x[0-9a-fA-F]+$')
 
     def parse_call(self):
         line = self.consume()
@@ -1933,7 +2012,12 @@ class PerfParser(LineParser):
             return None
 
         function_name = mo.group('symbol')
-        if not function_name:
+
+        # If present, amputate program counter from function name.
+        if function_name:
+            function_name = re.sub(self.addr2_re, '', function_name)
+
+        if not function_name or function_name == '[unknown]':
             function_name = mo.group('address')
 
         module = mo.group('module')
@@ -2481,11 +2565,11 @@ class SleepyParser(Parser):
                 name = database_name
                 break
 
-        return self.database.open(name, 'rU')
+        return self.database.open(name, 'r')
 
     def parse_symbols(self):
         for line in self.openEntry('Symbols.txt'):
-            line = line.decode('UTF-8')
+            line = line.decode('UTF-8').rstrip('\r\n')
 
             mo = self._symbol_re.match(line)
             if mo:
@@ -2505,7 +2589,7 @@ class SleepyParser(Parser):
 
     def parse_callstacks(self):
         for line in self.openEntry('Callstacks.txt'):
-            line = line.decode('UTF-8')
+            line = line.decode('UTF-8').rstrip('\r\n')
 
             fields = line.split()
             samples = float(fields[0])
@@ -2579,6 +2663,7 @@ class PstatsParser:
             id = len(self.function_ids)
             name = self.get_function_name(key)
             function = Function(id, name)
+            function.filename = key[0]
             self.profile.functions[id] = function
             self.function_ids[key] = id
         else:
@@ -2891,6 +2976,15 @@ class DotWriter:
                 function_name = function.stripped_name()
             else:
                 function_name = function.name
+
+            # dot can't parse quoted strings longer than YY_BUF_SIZE, which
+            # defaults to 16K. But some annotated C++ functions (e.g., boost,
+            # https://github.com/jrfonseca/gprof2dot/issues/30) can exceed that
+            MAX_FUNCTION_NAME = 4096
+            if len(function_name) >= MAX_FUNCTION_NAME:
+                sys.stderr.write('warning: truncating function name with %u chars (%s)\n' % (len(function_name), function_name[:32] + '...'))
+                function_name = function_name[:MAX_FUNCTION_NAME - 1] + unichr(0x2026)
+
             if self.wrap:
                 function_name = self.wrap_function_name(function_name)
             labels.append(function_name)
@@ -2913,6 +3007,7 @@ class DotWriter:
                 color = self.color(theme.node_bgcolor(weight)), 
                 fontcolor = self.color(theme.node_fgcolor(weight)), 
                 fontsize = "%.2f" % theme.node_fontsize(weight),
+                tooltip = function.filename,
             )
 
             for _, call in sorted_iteritems(function.calls):
@@ -2977,6 +3072,8 @@ class DotWriter:
         self.write(' [')
         first = True
         for name, value in sorted_iteritems(attrs):
+            if value is None:
+                continue
             if first:
                 first = False
             else:
@@ -3079,6 +3176,11 @@ def main():
         dest="strip", default=False,
         help="strip function parameters, template parameters, and const modifiers from demangled C++ function names")
     optparser.add_option(
+        '--colour-nodes-by-selftime',
+        action="store_true",
+        dest="colour_nodes_by_selftime", default=False,
+        help="colour nodes by self time, rather than by total time (sum of self and descendants)")
+    optparser.add_option(
         '-w', '--wrap',
         action="store_true",
         dest="wrap", default=False,
@@ -3128,6 +3230,8 @@ def main():
     if Format.stdinInput:
         if not args:
             fp = sys.stdin
+        elif PYTHON_3:
+            fp = open(args[0], 'rt', encoding='UTF-8')
         else:
             fp = open(args[0], 'rt')
         parser = Format(fp)
@@ -3143,7 +3247,10 @@ def main():
     profile = parser.parse()
 
     if options.output is None:
-        output = sys.stdout
+        if PYTHON_3:
+            output = open(sys.stdout.fileno(), mode='wt', encoding='UTF-8', closefd=False)
+        else:
+            output = sys.stdout
     else:
         if PYTHON_3:
             output = open(options.output, 'wt', encoding='UTF-8')
@@ -3157,7 +3264,7 @@ def main():
         dot.show_function_events.append(SAMPLES)
 
     profile = profile
-    profile.prune(options.node_thres/100.0, options.edge_thres/100.0)
+    profile.prune(options.node_thres/100.0, options.edge_thres/100.0, options.colour_nodes_by_selftime)
 
     if options.root:
         rootId = profile.getFunctionId(options.root)
