@@ -44,7 +44,6 @@ else:
 
 
 def find_dot():
-    devnull = open(os.devnull)
     if os.name == 'nt':
         folders = []
         try:
@@ -66,9 +65,10 @@ def find_dot():
         else:
             raise OSError('dot.exe not found, please install graphviz')
     else:
-        if subprocess.call(['type', 'dot'], shell=True, stdout=devnull, stderr=devnull):
-            raise OSError('\'dot\' not found, please install graphviz')
-        return 'dot'
+        with open(os.devnull) as devnull:
+            if subprocess.call(['type', 'dot'], shell=True, stdout=devnull, stderr=devnull):
+                raise OSError('\'dot\' not found, please install graphviz')
+            return 'dot'
 
 
 DOT_PATH = find_dot()
